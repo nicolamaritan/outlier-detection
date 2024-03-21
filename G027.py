@@ -1,4 +1,7 @@
 import math
+from pyspark import SparkContext, SparkConf
+import sys
+import os
 
 def ExactOutliers(points, D, M, K):
     # Each line of the kind "x,y\n" is converted into a tuple (x,y) of floats
@@ -25,8 +28,27 @@ def ExactOutliers(points, D, M, K):
 
                     
 def main():
+    # CHECKING NUMBER OF CMD LINE PARAMETERS
+    assert len(sys.argv) == 3, "Usage: python G027.py <K> <file_name>"
+
+    # SPARK SETUP
+    conf = SparkConf().setAppName('???')
+    sc = SparkContext(conf=conf)
+
+    # INPUT READING
+
+    # 1. Read number of partitions
+    K = sys.argv[1]
+    assert K.isdigit(), "K must be an integer"
+    K = int(K)
+
+    # 2. Read input file and subdivide it into K random partitions
+    data_path = sys.argv[2]
+    assert os.path.isfile(data_path), "File or folder not found"
+    docs = sc.textFile(data_path, minPartitions=K).repartition(numPartitions=K).cache()
+
     # Open the file in read mode
-    with open('TestN15-input.txt', 'r') as file:
+    with open(data_path, 'r') as file:
         # Read all lines into a list
         points = file.readlines()
     ExactOutliers(points=points, D=2, M=3, K=15)
