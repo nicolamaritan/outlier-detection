@@ -26,8 +26,26 @@ def ExactOutliers(points, D, M, K):
         if B_cardinality[i][1] <= M:
             print(points[B_cardinality[i][0]])
 
+def round_coordinates(point, D):
+    capital_lambda = D / (2*math.sqrt(2))
+    return [(tuple(map(lambda str: int(float(str) / capital_lambda), point.strip().split(','))), 1)]
+
+def gather_pairs_partitions(pairs):
+	pairs_dict = {}
+	for p in pairs:
+		coordinate, occurrence = p[0], p[1] # p[1] is always 1 from the previous round
+		if coordinate not in pairs_dict.keys():
+			pairs_dict[coordinate] = occurrence
+		else:
+			pairs_dict[coordinate] += occurrence
+	return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
+
 def MRApproxOutliers(points, D, M, K):
-    out = points.flatMap(lambda point: [(tuple(map(float, point.strip().split(','))), 1)])
+    out = (points.flatMap(lambda str: round_coordinates(str, D))    # <-- MAP PHASE (R1)
+           .mapPartitions(gather_pairs_partitions)                  # <-- REDUCE PHASE (R1)
+           .groupByKey()                                            # <-- SHUFFLE+GROUPING
+           .mapValues(lambda ones: len(ones))                       # <-- REDUCE PHASE (R2)
+           )
     print(out.collect())
                     
 def main():
