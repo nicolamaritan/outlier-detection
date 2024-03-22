@@ -26,6 +26,9 @@ def ExactOutliers(points, D, M, K):
         if B_cardinality[i][1] <= M:
             print(points[B_cardinality[i][0]])
 
+def MRApproxOutliers(points, D, M, K):
+    out = points.flatMap(lambda point: [(tuple(map(float, point.strip().split(','))), 1)])
+    print(out.collect())
                     
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
@@ -45,13 +48,14 @@ def main():
     # 2. Read input file and subdivide it into K random partitions
     data_path = sys.argv[2]
     assert os.path.isfile(data_path), "File or folder not found"
-    docs = sc.textFile(data_path, minPartitions=K).repartition(numPartitions=K).cache()
+    points = sc.textFile(data_path, minPartitions=K).repartition(numPartitions=K).cache()
 
     # Open the file in read mode
     with open(data_path, 'r') as file:
         # Read all lines into a list
-        points = file.readlines()
-    ExactOutliers(points=points, D=2, M=3, K=15)
+        points_file = file.readlines()
+    ExactOutliers(points=points_file, D=2, M=3, K=15)
+    MRApproxOutliers(points=points, D=2, M=3, K=15)
 
 if __name__ == "__main__":
 	main()
