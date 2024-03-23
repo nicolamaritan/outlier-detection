@@ -28,7 +28,9 @@ def ExactOutliers(points, D, M, K):
 
 def round_coordinates(point, D):
     capital_lambda = D / (2*math.sqrt(2))
-    return [(tuple(map(lambda str: int(float(str) / capital_lambda), point.strip().split(','))), 1)]
+    # Converts each key (x_p, y_p) into (floor(x_p/Lambda), floor(x_p/Lambda)).
+    # Floor is implemented through casting from float to int.
+    return [((int(point[0] / capital_lambda), int(point[1] / capital_lambda)), 1)]
 
 def gather_pairs_partitions(pairs):
 	pairs_dict = {}
@@ -40,13 +42,16 @@ def gather_pairs_partitions(pairs):
 			pairs_dict[coordinate] += occurrence
 	return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
 
-def MRApproxOutliers(points, D, M, K):
-    out = (points.flatMap(lambda str: round_coordinates(str, D))    # <-- MAP PHASE (R1)
-           .mapPartitions(gather_pairs_partitions)                  # <-- REDUCE PHASE (R1)
-           .groupByKey()                                            # <-- SHUFFLE+GROUPING
-           .mapValues(lambda ones: len(ones))                       # <-- REDUCE PHASE (R2)
+def MRApproxOutliers(inputPoints, D, M, K):
+    # -------------------- Step A --------------------
+    out = (inputPoints.flatMap(lambda str: round_coordinates(str, D))   # <-- MAP PHASE (R1)
+           .mapPartitions(gather_pairs_partitions)                      # <-- REDUCE PHASE (R1)
+           .groupByKey()                                                # <-- SHUFFLE+GROUPING
+           .mapValues(lambda vals: sum(vals))                           # <-- REDUCE PHASE (R2)
            )
     print(out.collect())
+
+    # -------------------- Step B --------------------
                     
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
@@ -59,21 +64,25 @@ def main():
     # INPUT READING
 
     # 1. Read number of partitions
-    K = sys.argv[1]
-    assert K.isdigit(), "K must be an integer"
-    K = int(K)
+    L = sys.argv[1]
+    assert L.isdigit(), "L must be an integer"
+    L = int(L)
 
     # 2. Read input file and subdivide it into K random partitions
     data_path = sys.argv[2]
     assert os.path.isfile(data_path), "File or folder not found"
-    points = sc.textFile(data_path, minPartitions=K).repartition(numPartitions=K).cache()
+    rawData = sc.textFile(data_path, minPartitions=L)
+
+    # inputPoints is an RDD of pairs of float    
+    inputPoints = rawData.flatMap(lambda point: [tuple(map(float, point.strip().split(',')))])
+    inputPoints.repartition(numPartitions=L).cache()
 
     # Open the file in read mode
     with open(data_path, 'r') as file:
         # Read all lines into a list
         points_file = file.readlines()
     ExactOutliers(points=points_file, D=2, M=3, K=15)
-    MRApproxOutliers(points=points, D=2, M=3, K=15)
+    MRApproxOutliers(inputPoints=inputPoints, D=2, M=3, K=15)
 
 if __name__ == "__main__":
 	main()
