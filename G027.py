@@ -56,7 +56,14 @@ def MRApproxOutliers(inputPoints, D, M, K):
     #pair_list = output_A.collect()
     #output_B = (output_A.flatMap(lambda pair: (pair[0], pair_list)))
     #print(output_B.collect())
-                    
+
+def is_float(string):
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
     assert len(sys.argv)-1 == 5, "Usage: python G027.py <K> <file_name>"
@@ -77,8 +84,8 @@ def main():
 
     # 1. Read value of D
     D = sys.argv[2]
-    assert D.isdigit(), "D must be an integer"
-    D = int(D)
+    assert is_float(D), "D must be a float"
+    D = float(D)
 
     # 2. Read value of M
     M = sys.argv[3]
@@ -108,7 +115,9 @@ def main():
     num_Points = len(inputPoints.collect())
     print(f'Total number of points: {num_Points}')
 
-    if num_Points <= 200000:
+    MAX_POINTS_EXACT_OUTLIERS = 200000
+
+    if num_Points <= MAX_POINTS_EXACT_OUTLIERS:
         # Open the file in read mode
         with open(data_path, 'r') as file:
             # Read all lines into a list
