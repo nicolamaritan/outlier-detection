@@ -26,7 +26,7 @@ def ExactOutliers(points, D, M, K):
         if B_cardinality[i][1] <= M:
             print(points[B_cardinality[i][0]])
 
-def round_coordinates(point, D):
+def floor_coordinates(point, D):
     capital_lambda = D / (2*math.sqrt(2))
     # Converts each key (x_p, y_p) into (floor(x_p/Lambda), floor(x_p/Lambda)).
     # Floor is implemented through casting from float to int.
@@ -44,14 +44,17 @@ def gather_pairs_partitions(pairs):
 
 def MRApproxOutliers(inputPoints, D, M, K):
     # -------------------- Step A --------------------
-    out = (inputPoints.flatMap(lambda str: round_coordinates(str, D))   # <-- MAP PHASE (R1)
-           .mapPartitions(gather_pairs_partitions)                      # <-- REDUCE PHASE (R1)
-           .groupByKey()                                                # <-- SHUFFLE+GROUPING
-           .mapValues(lambda vals: sum(vals))                           # <-- REDUCE PHASE (R2)
+    output_A = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
+           .mapPartitions(gather_pairs_partitions)                           # <-- REDUCE PHASE (R1)
+           .groupByKey()                                                     # <-- SHUFFLE+GROUPING
+           .mapValues(lambda vals: sum(vals))                                # <-- REDUCE PHASE (R2)
            )
-    print(out.collect())
+    print(output_A.collect())
 
     # -------------------- Step B --------------------
+    #pair_list = output_A.collect()
+    #output_B = (output_A.flatMap(lambda pair: (pair[0], pair_list)))
+    #print(output_B.collect())
                     
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
