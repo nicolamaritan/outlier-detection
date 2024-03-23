@@ -1,19 +1,20 @@
 import math
+import time
 from pyspark import SparkContext, SparkConf
 import sys
 import os
 
-def ExactOutliers(points, D, M, K):
+def ExactOutliers(listOfPoints, D, M, K):
     # Each line of the kind "x,y\n" is converted into a tuple (x,y) of floats
-    points = [tuple(map(float, point.strip().split(','))) for point in points]
+    listOfPoints = [tuple(map(float, point.strip().split(','))) for point in listOfPoints]
 
     # [i, |B_s(p,D)|] for the i-th point in points
-    B_cardinality = [[i, 0] for i, _ in enumerate(points)]
+    B_cardinality = [[i, 0] for i, _ in enumerate(listOfPoints)]
 
     # We compute only the upper triangle of the distance matrix for efficiency
-    for i in range(0, len(points)-1):
-        for j in range(i+1, len(points)):
-            if  math.dist(points[i], points[j]) <= D:
+    for i in range(0, len(listOfPoints)-1):
+        for j in range(i+1, len(listOfPoints)):
+            if  math.dist(listOfPoints[i], listOfPoints[j]) <= D:
                 B_cardinality[i][1] += 1
                 B_cardinality[j][1] += 1
 
@@ -24,7 +25,7 @@ def ExactOutliers(points, D, M, K):
 
     for i in range(K):
         if B_cardinality[i][1] <= M:
-            print(points[B_cardinality[i][0]])
+            print(listOfPoints[B_cardinality[i][0]])
 
 def floor_coordinates(point, D):
     capital_lambda = D / (2*math.sqrt(2))
@@ -58,7 +59,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
                     
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
-    assert len(sys.argv) == 3, "Usage: python G027.py <K> <file_name>"
+    assert len(sys.argv)-1 == 5, "Usage: python G027.py <K> <file_name>"
 
     # SPARK SETUP
     conf = SparkConf().setAppName('???')
@@ -66,13 +67,36 @@ def main():
 
     # INPUT READING
 
-    # 1. Read number of partitions
-    L = sys.argv[1]
+    #PRINT INPUT FILE, D, M, K, L
+    print(f'Input file: {sys.argv[1]}')
+    print(f'D = {sys.argv[2]}')
+    print(f'M = {sys.argv[3]}')
+    print(f'K = {sys.argv[4]}')
+    print(f'L = {sys.argv[5]}')
+
+
+    # 1. Read value of D
+    D = sys.argv[2]
+    assert D.isdigit(), "D must be an integer"
+    D = int(D)
+
+    # 2. Read value of M
+    M = sys.argv[3]
+    assert M.isdigit(), "M must be an integer"
+    M = int(M)
+
+    # 3. Read value of K
+    K = sys.argv[4]
+    assert K.isdigit(), "K must be an integer"
+    K = int(K)
+
+    # 4. Read number of partitions
+    L = sys.argv[5]
     assert L.isdigit(), "L must be an integer"
     L = int(L)
 
-    # 2. Read input file and subdivide it into K random partitions
-    data_path = sys.argv[2]
+    # 5. Read input file and subdivide it into L random partitions
+    data_path = sys.argv[1]
     assert os.path.isfile(data_path), "File or folder not found"
     rawData = sc.textFile(data_path, minPartitions=L)
 
@@ -80,12 +104,24 @@ def main():
     inputPoints = rawData.flatMap(lambda point: [tuple(map(float, point.strip().split(',')))])
     inputPoints.repartition(numPartitions=L).cache()
 
-    # Open the file in read mode
-    with open(data_path, 'r') as file:
-        # Read all lines into a list
-        points_file = file.readlines()
-    ExactOutliers(points=points_file, D=2, M=3, K=15)
-    MRApproxOutliers(inputPoints=inputPoints, D=2, M=3, K=15)
+    # total number of points
+    num_Points = len(inputPoints.collect())
+    print(f'Total number of points: {num_Points}')
+
+    if num_Points <= 200000:
+        # Open the file in read mode
+        with open(data_path, 'r') as file:
+            # Read all lines into a list
+            listOfPoints = file.readlines()
+        start = time.time()
+        ExactOutliers(listOfPoints=listOfPoints, D=D, M=M, K=K)
+        end = time.time()
+        print(f'Running time of ExactOutliers: {end - start} s')
+
+    start = time.time()
+    MRApproxOutliers(inputPoints=inputPoints, D=D, M=M, K=K)
+    end = time.time()
+    print(f'Running time of MRApproxOutliers: {end - start} s')
 
 if __name__ == "__main__":
 	main()
