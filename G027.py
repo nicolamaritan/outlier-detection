@@ -1,4 +1,7 @@
 import math
+from pyspark import SparkContext, SparkConf
+import sys
+import os
 
 def ExactOutliers(points, D, M, K):
     # Each line of the kind "x,y\n" is converted into a tuple (x,y) of floats
@@ -23,13 +26,66 @@ def ExactOutliers(points, D, M, K):
         if B_cardinality[i][1] <= M:
             print(points[B_cardinality[i][0]])
 
+def floor_coordinates(point, D):
+    capital_lambda = D / (2*math.sqrt(2))
+    # Converts each key (x_p, y_p) into (floor(x_p/Lambda), floor(x_p/Lambda)).
+    # Floor is implemented through casting from float to int.
+    return [((int(point[0] / capital_lambda), int(point[1] / capital_lambda)), 1)]
+
+def gather_pairs_partitions(pairs):
+	pairs_dict = {}
+	for p in pairs:
+		coordinate, occurrence = p[0], p[1] # p[1] is always 1 from the previous round
+		if coordinate not in pairs_dict.keys():
+			pairs_dict[coordinate] = occurrence
+		else:
+			pairs_dict[coordinate] += occurrence
+	return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
+
+def MRApproxOutliers(inputPoints, D, M, K):
+    # -------------------- Step A --------------------
+    output_A = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
+           .mapPartitions(gather_pairs_partitions)                           # <-- REDUCE PHASE (R1)
+           .groupByKey()                                                     # <-- SHUFFLE+GROUPING
+           .mapValues(lambda vals: sum(vals))                                # <-- REDUCE PHASE (R2)
+           )
+    print(output_A.collect())
+
+    # -------------------- Step B --------------------
+    #pair_list = output_A.collect()
+    #output_B = (output_A.flatMap(lambda pair: (pair[0], pair_list)))
+    #print(output_B.collect())
                     
 def main():
+    # CHECKING NUMBER OF CMD LINE PARAMETERS
+    assert len(sys.argv) == 3, "Usage: python G027.py <K> <file_name>"
+
+    # SPARK SETUP
+    conf = SparkConf().setAppName('???')
+    sc = SparkContext(conf=conf)
+
+    # INPUT READING
+
+    # 1. Read number of partitions
+    L = sys.argv[1]
+    assert L.isdigit(), "L must be an integer"
+    L = int(L)
+
+    # 2. Read input file and subdivide it into K random partitions
+    data_path = sys.argv[2]
+    assert os.path.isfile(data_path), "File or folder not found"
+    rawData = sc.textFile(data_path, minPartitions=L)
+
+    # inputPoints is an RDD of pairs of float    
+    inputPoints = rawData.flatMap(lambda point: [tuple(map(float, point.strip().split(',')))])
+    inputPoints.repartition(numPartitions=L).cache()
+
     # Open the file in read mode
-    with open('TestN15-input.txt', 'r') as file:
+    with open(data_path, 'r') as file:
         # Read all lines into a list
-        points = file.readlines()
-    ExactOutliers(points=points, D=2, M=3, K=15)
+        points_file = file.readlines()
+    ExactOutliers(points=points_file, D=2, M=3, K=15)
+    MRApproxOutliers(inputPoints=inputPoints, D=2, M=3, K=15)
 
 if __name__ == "__main__":
 	main()
