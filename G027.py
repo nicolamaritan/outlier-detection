@@ -50,12 +50,47 @@ def MRApproxOutliers(inputPoints, D, M, K):
            .groupByKey()                                                     # <-- SHUFFLE+GROUPING
            .mapValues(lambda vals: sum(vals))                                # <-- REDUCE PHASE (R2)
            )
-    print(output_A.collect())
 
     # -------------------- Step B --------------------
-    #pair_list = output_A.collect()
-    #output_B = (output_A.flatMap(lambda pair: (pair[0], pair_list)))
-    #print(output_B.collect())
+    pair_list = output_A.collect()
+
+    cell_dict = {}
+    for i in range(len(pair_list)):
+        current_cell = pair_list[i][0]
+        cell_dict[current_cell] = [pair_list[i][1], pair_list[i][1]]
+
+        for j in range(0, i):
+            other_cell = pair_list[j][0]
+            
+            if((abs(other_cell[0] - current_cell[0]) <= 1) and
+                (abs(other_cell[1] - current_cell[1]) <= 1)):
+                cell_dict[current_cell][0] += pair_list[j][1]
+                cell_dict[other_cell][0] += pair_list[i][1]
+                cell_dict[current_cell][1] += pair_list[j][1]
+                cell_dict[other_cell][1] += pair_list[i][1]
+
+            elif((abs(other_cell[0] - current_cell[0]) <= 3) and
+                (abs(other_cell[1] - current_cell[1]) <= 3)):
+                cell_dict[current_cell][1] += pair_list[j][1]
+                cell_dict[other_cell][1] += pair_list[i][1]
+
+        outliers_count = 0
+        uncertain_count = 0
+        for cell in cell_dict:
+            if cell_dict[cell][1] <= M:
+                outliers_count+=1
+            elif(cell_dict[cell][0] <= M):
+                uncertain_count+=1
+
+    print("Number of outliers:", outliers_count)
+    print("Number of uncertain points:", uncertain_count)
+
+
+    pair_list.sort(key = lambda x: x[1])
+    for cell, size in pair_list[:K]:
+        print(cell, size)
+
+
 
 def is_float(string):
     try:
