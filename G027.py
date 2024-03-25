@@ -9,7 +9,9 @@ def ExactOutliers(listOfPoints, D, M, K):
     listOfPoints = [tuple(map(float, point.strip().split(','))) for point in listOfPoints]
 
     # [i, |B_s(p,D)|] for the i-th point in points
-    B_cardinality = [[i, 0] for i, _ in enumerate(listOfPoints)]
+    # We start with 1 to count p itself, since in the following loop it will
+    # not consider the case i=j (j starts from i+1).
+    B_cardinality = [[i, 1] for i, _ in enumerate(listOfPoints)]
 
     # We compute only the upper triangle of the distance matrix for efficiency
     for i in range(0, len(listOfPoints)-1):
