@@ -66,21 +66,13 @@ def is_float(string):
 
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
-    assert len(sys.argv)-1 == 5, "Usage: python G027.py <K> <file_name>"
+    assert len(sys.argv) == 6, "Usage: python G027.py <K> <file_name>"
 
     # SPARK SETUP
-    conf = SparkConf().setAppName('???')
+    conf = SparkConf().setAppName('Outlier Detection')
     sc = SparkContext(conf=conf)
 
     # INPUT READING
-
-    #PRINT INPUT FILE, D, M, K, L
-    print(f'Input file: {sys.argv[1]}')
-    print(f'D = {sys.argv[2]}')
-    print(f'M = {sys.argv[3]}')
-    print(f'K = {sys.argv[4]}')
-    print(f'L = {sys.argv[5]}')
-
 
     # 1. Read value of D
     D = sys.argv[2]
@@ -101,6 +93,13 @@ def main():
     L = sys.argv[5]
     assert L.isdigit(), "L must be an integer"
     L = int(L)
+
+    # PRINT INPUT FILE, D, M, K, L
+    print(f'Input file: {sys.argv[1]}')
+    print(f'D = {sys.argv[2]}')
+    print(f'M = {sys.argv[3]}')
+    print(f'K = {sys.argv[4]}')
+    print(f'L = {sys.argv[5]}')
 
     # 5. Read input file and subdivide it into L random partitions
     data_path = sys.argv[1]
