@@ -94,7 +94,8 @@ def MRApproxOutliers(inputPoints, D, M, K):
     print("Number of sure outliers =", outliers_count)
     print("Number of uncertain points =", uncertain_count)
 
-    for cell, size in pairs_RDD.sortBy(lambda x: x[1]).take(K):
+    # We first swap size and cell, then sort by key, i.e. the size of the cell
+    for size, cell in pairs_RDD.map(lambda pair: (pair[1], pair[0])).sortByKey().take(K):
         print(f"Cell: {cell}  Size = {size}")
 
 def is_within_square(current, other, size):
