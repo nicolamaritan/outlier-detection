@@ -20,14 +20,14 @@ def ExactOutliers(listOfPoints, D, M, K):
                 B_cardinality[i][1] += 1
                 B_cardinality[j][1] += 1
 
-    print(f"({D},{M})-outliers:", sum([1 for _, B in B_cardinality if B <= M]))
+    print(f"Number of Outliers =", sum([1 for _, B in B_cardinality if B <= M]))
     
     # Sort by non-decreasing values of |B_s(p,D)|
     B_cardinality.sort(key = lambda x: x[1])
 
     for i in range(K):
         if B_cardinality[i][1] <= M:
-            print(listOfPoints[B_cardinality[i][0]])
+            print(f"Point: {listOfPoints[B_cardinality[i][0]]}")
 
 def floor_coordinates(point, D):
     capital_lambda = D / (2*math.sqrt(2))
@@ -84,13 +84,13 @@ def MRApproxOutliers(inputPoints, D, M, K):
         elif(cell_dict[pair[0]][0] <= M):
             uncertain_count+=pair[1]
 
-    print("Number of outliers:", outliers_count)
-    print("Number of uncertain points:", uncertain_count)
+    print("Number of sure outliers =", outliers_count)
+    print("Number of uncertain points =", uncertain_count)
 
 
     pair_list.sort(key = lambda x: x[1])
     for cell, size in pair_list[:K]:
-        print(cell, size)
+        print(f"Cell: {cell}  Size = {size}")
 
 
 
@@ -132,11 +132,7 @@ def main():
     L = int(L)
 
     # PRINT INPUT FILE, D, M, K, L
-    print(f'Input file: {sys.argv[1]}')
-    print(f'D = {sys.argv[2]}')
-    print(f'M = {sys.argv[3]}')
-    print(f'K = {sys.argv[4]}')
-    print(f'L = {sys.argv[5]}')
+    print(f'{sys.argv[1]} D = {sys.argv[2]} M = {sys.argv[3]} K = {sys.argv[4]} L = {sys.argv[5]}')
 
     # 5. Read input file and subdivide it into L random partitions
     data_path = sys.argv[1]
@@ -149,7 +145,7 @@ def main():
 
     # total number of points
     num_Points = len(inputPoints.collect())
-    print(f'Total number of points: {num_Points}')
+    print(f'Number of points = {num_Points}')
 
     MAX_POINTS_EXACT_OUTLIERS = 200000
 
@@ -161,12 +157,12 @@ def main():
         start = time.time()
         ExactOutliers(listOfPoints=listOfPoints, D=D, M=M, K=K)
         end = time.time()
-        print(f'Running time of ExactOutliers: {end - start} s')
+        print(f'Running time of ExactOutliers = {round(1000*(end - start))} ms')
 
     start = time.time()
     MRApproxOutliers(inputPoints=inputPoints, D=D, M=M, K=K)
     end = time.time()
-    print(f'Running time of MRApproxOutliers: {end - start} s')
+    print(f'Running time of MRApproxOutliers = {round(1000*(end - start))} ms')
 
 if __name__ == "__main__":
 	main()
