@@ -237,7 +237,7 @@ Point: (40.9062, -73.9043)
 Point: (40.7048, -73.8175)
 Point: (40.7127, -73.812)
 Point: (40.7092, -73.9038)
-Running time of ExactOutliers = 8172 ms
+Running time of ExactOutliers = 8024 ms
 Number of sure outliers = 165
 Number of uncertain points = 195
 Cell: (5796, -10488)  Size = 1
@@ -740,4 +740,4 @@ Cell: (5759, -10471)  Size = 40
 Cell: (5761, -10470)  Size = 42
 Cell: (5763, -10466)  Size = 46
 Cell: (5764, -10460)  Size = 49
-Running time of MRApproxOutliers = 1813 ms
+Running time of MRApproxOutliers = 1983 ms

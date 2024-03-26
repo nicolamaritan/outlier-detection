@@ -47,43 +47,45 @@ def gather_pairs_partitions(pairs):
 
 def MRApproxOutliers(inputPoints, D, M, K):
     # -------------------- Step A --------------------
-    output_A = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
-           .mapPartitions(gather_pairs_partitions)                           # <-- REDUCE PHASE (R1)
-           .groupByKey()                                                     # <-- SHUFFLE+GROUPING
-           .mapValues(lambda vals: sum(vals))                                # <-- REDUCE PHASE (R2)
+    pairs_RDD = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
+           .mapPartitions(gather_pairs_partitions)                            # <-- REDUCE PHASE (R1)
+           .groupByKey()                                                      # <-- SHUFFLE+GROUPING
+           .mapValues(lambda vals: sum(vals))                                 # <-- REDUCE PHASE (R2)
            )
 
     # -------------------- Step B --------------------
-    pair_list = output_A.collect()
+    pairs_list = pairs_RDD.collect()
 
     cell_dict = {}
-    for i in range(len(pair_list)):
-        current_cell = pair_list[i][0]
-        cell_dict[current_cell] = [pair_list[i][1], pair_list[i][1]]
+    for i in range(len(pairs_list)):
+        current_cell = pairs_list[i][0]
+        # Put the initial value of N3, N7 corresponding to the cell's size itself.
+        cell_dict[current_cell] = [pairs_list[i][1], pairs_list[i][1]]
 
+        # We consider only pairs (i,j) with j<i because of simmetry.
         for j in range(0, i):
-            other_cell = pair_list[j][0]
+            other_cell = pairs_list[j][0]
             
             # Checks if other_cell is within the square of size 3 with center current_cell.
             # If it is the case, it is also in the square of size 7.
             if(is_within_square(current_cell, other_cell, 3)):
                 # If other_cell is in such square, then current_cell is within the square
                 # of size 3 with center other_square. So we update N3 and N7 of both cells.
-                # This works since we are considering only once the pairwise distance 
+                # This works since we are considering only once the pairwise distance (wrt cells)
                 # between two arbirary cells.
-                cell_dict[current_cell][0] += pair_list[j][1]
-                cell_dict[other_cell][0] += pair_list[i][1]
-                cell_dict[current_cell][1] += pair_list[j][1]
-                cell_dict[other_cell][1] += pair_list[i][1]
+                cell_dict[current_cell][0] += pairs_list[j][1]
+                cell_dict[other_cell][0] += pairs_list[i][1]
+                cell_dict[current_cell][1] += pairs_list[j][1]
+                cell_dict[other_cell][1] += pairs_list[i][1]
 
             # Checks if other_cell is within the square of size 7 with center current_cell.
             elif(is_within_square(current_cell, other_cell, 7)):
-                cell_dict[current_cell][1] += pair_list[j][1]
-                cell_dict[other_cell][1] += pair_list[i][1]
+                cell_dict[current_cell][1] += pairs_list[j][1]
+                cell_dict[other_cell][1] += pairs_list[i][1]
 
     outliers_count = 0
     uncertain_count = 0
-    for pair in pair_list:
+    for pair in pairs_list:
         if cell_dict[pair[0]][1] <= M:
             outliers_count+=pair[1]
         elif(cell_dict[pair[0]][0] <= M):
@@ -92,7 +94,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
     print("Number of sure outliers =", outliers_count)
     print("Number of uncertain points =", uncertain_count)
 
-    for cell, size in output_A.sortBy(lambda x: x[1]).take(K):
+    for cell, size in pairs_RDD.sortBy(lambda x: x[1]).take(K):
         print(f"Cell: {cell}  Size = {size}")
 
 def is_within_square(current, other, size):
