@@ -76,13 +76,13 @@ def MRApproxOutliers(inputPoints, D, M, K):
                 cell_dict[current_cell][1] += pair_list[j][1]
                 cell_dict[other_cell][1] += pair_list[i][1]
 
-        outliers_count = 0
-        uncertain_count = 0
-        for cell in cell_dict:
-            if cell_dict[cell][1] <= M:
-                outliers_count+=1
-            elif(cell_dict[cell][0] <= M):
-                uncertain_count+=1
+    outliers_count = 0
+    uncertain_count = 0
+    for pair in pair_list:
+        if cell_dict[pair[0]][1] <= M:
+            outliers_count+=pair[1]
+        elif(cell_dict[pair[0]][0] <= M):
+            uncertain_count+=pair[1]
 
     print("Number of outliers:", outliers_count)
     print("Number of uncertain points:", uncertain_count)
