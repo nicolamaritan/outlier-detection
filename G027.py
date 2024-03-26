@@ -64,15 +64,20 @@ def MRApproxOutliers(inputPoints, D, M, K):
         for j in range(0, i):
             other_cell = pair_list[j][0]
             
-            if((abs(other_cell[0] - current_cell[0]) <= 1) and
-                (abs(other_cell[1] - current_cell[1]) <= 1)):
+            # Checks if other_cell is within the square of size 3 with center current_cell.
+            # If it is the case, it is also in the square of size 7.
+            if(is_within_square(current_cell, other_cell, 3)):
+                # If other_cell is in such square, then current_cell is within the square
+                # of size 3 with center other_square. So we update N3 and N7 of both cells.
+                # This works since we are considering only once the pairwise distance 
+                # between two arbirary cells.
                 cell_dict[current_cell][0] += pair_list[j][1]
                 cell_dict[other_cell][0] += pair_list[i][1]
                 cell_dict[current_cell][1] += pair_list[j][1]
                 cell_dict[other_cell][1] += pair_list[i][1]
 
-            elif((abs(other_cell[0] - current_cell[0]) <= 3) and
-                (abs(other_cell[1] - current_cell[1]) <= 3)):
+            # Checks if other_cell is within the square of size 7 with center current_cell.
+            elif(is_within_square(current_cell, other_cell, 7)):
                 cell_dict[current_cell][1] += pair_list[j][1]
                 cell_dict[other_cell][1] += pair_list[i][1]
 
@@ -90,7 +95,8 @@ def MRApproxOutliers(inputPoints, D, M, K):
     for cell, size in output_A.sortBy(lambda x: x[1]).take(K):
         print(f"Cell: {cell}  Size = {size}")
 
-
+def is_within_square(current, other, size):
+    return (abs(other[0] - current[0]) <= size//2) and (abs(other[1] - current[1]) <= size//2)
 
 def is_float(string):
     try:
