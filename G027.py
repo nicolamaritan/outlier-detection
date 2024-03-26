@@ -33,7 +33,7 @@ def floor_coordinates(point, D):
     capital_lambda = D / (2*math.sqrt(2))
     # Converts each key (x_p, y_p) into (floor(x_p/Lambda), floor(x_p/Lambda)).
     # Floor is implemented through casting from float to int.
-    return [((int(point[0] / capital_lambda), int(point[1] / capital_lambda)), 1)]
+    return [((math.floor(point[0] / capital_lambda), math.floor(point[1] / capital_lambda)), 1)]
 
 def gather_pairs_partitions(pairs):
 	pairs_dict = {}
