@@ -87,9 +87,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
     print("Number of sure outliers =", outliers_count)
     print("Number of uncertain points =", uncertain_count)
 
-
-    pair_list.sort(key = lambda x: x[1])
-    for cell, size in pair_list[:K]:
+    for cell, size in output_A.sortBy(lambda x: x[1]).take(K):
         print(f"Cell: {cell}  Size = {size}")
 
 
