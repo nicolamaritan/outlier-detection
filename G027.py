@@ -110,7 +110,7 @@ def is_float(string):
 
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
-    assert len(sys.argv) == 6, "Usage: python G027.py <K> <file_name>"
+    assert len(sys.argv) == 6, "Usage: python G027.py <file_name> <D> <M> <K> <L>"
 
     # SPARK SETUP
     conf = SparkConf().setAppName('Outlier Detection')
