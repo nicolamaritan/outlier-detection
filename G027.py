@@ -9,7 +9,9 @@ def ExactOutliers(listOfPoints, D, M, K):
     listOfPoints = [tuple(map(float, point.strip().split(','))) for point in listOfPoints]
 
     # [i, |B_s(p,D)|] for the i-th point in points
-    B_cardinality = [[i, 0] for i, _ in enumerate(listOfPoints)]
+    # We start with 1 to count p itself, since in the following loop it will
+    # not consider the case i=j (j starts from i+1).
+    B_cardinality = [[i, 1] for i, _ in enumerate(listOfPoints)]
 
     # We compute only the upper triangle of the distance matrix for efficiency
     for i in range(0, len(listOfPoints)-1):
@@ -18,20 +20,20 @@ def ExactOutliers(listOfPoints, D, M, K):
                 B_cardinality[i][1] += 1
                 B_cardinality[j][1] += 1
 
-    print(f"({D},{M})-outliers:", sum([1 for _, B in B_cardinality if B <= M]))
+    print(f"Number of Outliers =", sum([1 for _, B in B_cardinality if B <= M]))
     
     # Sort by non-decreasing values of |B_s(p,D)|
     B_cardinality.sort(key = lambda x: x[1])
 
     for i in range(K):
         if B_cardinality[i][1] <= M:
-            print(listOfPoints[B_cardinality[i][0]])
+            print(f"Point: {listOfPoints[B_cardinality[i][0]]}")
 
 def floor_coordinates(point, D):
     capital_lambda = D / (2*math.sqrt(2))
     # Converts each key (x_p, y_p) into (floor(x_p/Lambda), floor(x_p/Lambda)).
     # Floor is implemented through casting from float to int.
-    return [((int(point[0] / capital_lambda), int(point[1] / capital_lambda)), 1)]
+    return [((math.floor(point[0] / capital_lambda), math.floor(point[1] / capital_lambda)), 1)]
 
 def gather_pairs_partitions(pairs):
 	pairs_dict = {}
@@ -45,17 +47,59 @@ def gather_pairs_partitions(pairs):
 
 def MRApproxOutliers(inputPoints, D, M, K):
     # -------------------- Step A --------------------
-    output_A = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
-           .mapPartitions(gather_pairs_partitions)                           # <-- REDUCE PHASE (R1)
-           .groupByKey()                                                     # <-- SHUFFLE+GROUPING
-           .mapValues(lambda vals: sum(vals))                                # <-- REDUCE PHASE (R2)
+    pairs_RDD = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
+           .mapPartitions(gather_pairs_partitions)                            # <-- REDUCE PHASE (R1)
+           .groupByKey()                                                      # <-- SHUFFLE+GROUPING
+           .mapValues(lambda vals: sum(vals))                                 # <-- REDUCE PHASE (R2)
            )
-    print(output_A.collect())
 
     # -------------------- Step B --------------------
-    #pair_list = output_A.collect()
-    #output_B = (output_A.flatMap(lambda pair: (pair[0], pair_list)))
-    #print(output_B.collect())
+    pairs_list = pairs_RDD.collect()
+
+    cell_dict = {}
+    for i in range(len(pairs_list)):
+        current_cell = pairs_list[i][0]
+        # Put the initial value of N3, N7 corresponding to the cell's size itself.
+        cell_dict[current_cell] = [pairs_list[i][1], pairs_list[i][1]]
+
+        # We consider only pairs (i,j) with j<i because of simmetry.
+        for j in range(0, i):
+            other_cell = pairs_list[j][0]
+            
+            # Checks if other_cell is within the square of size 3 with center current_cell.
+            # If it is the case, it is also in the square of size 7.
+            if(is_within_square(current_cell, other_cell, 3)):
+                # If other_cell is in such square, then current_cell is within the square
+                # of size 3 with center other_square. So we update N3 and N7 of both cells.
+                # This works since we are considering only once the pairwise distance (wrt cells)
+                # between two arbirary cells.
+                cell_dict[current_cell][0] += pairs_list[j][1]
+                cell_dict[other_cell][0] += pairs_list[i][1]
+                cell_dict[current_cell][1] += pairs_list[j][1]
+                cell_dict[other_cell][1] += pairs_list[i][1]
+
+            # Checks if other_cell is within the square of size 7 with center current_cell.
+            elif(is_within_square(current_cell, other_cell, 7)):
+                cell_dict[current_cell][1] += pairs_list[j][1]
+                cell_dict[other_cell][1] += pairs_list[i][1]
+
+    outliers_count = 0
+    uncertain_count = 0
+    for pair in pairs_list:
+        if cell_dict[pair[0]][1] <= M:
+            outliers_count+=pair[1]
+        elif(cell_dict[pair[0]][0] <= M):
+            uncertain_count+=pair[1]
+
+    print("Number of sure outliers =", outliers_count)
+    print("Number of uncertain points =", uncertain_count)
+
+    # We first swap size and cell, then sort by key, i.e. the size of the cell
+    for size, cell in pairs_RDD.map(lambda pair: (pair[1], pair[0])).sortByKey().take(K):
+        print(f"Cell: {cell}  Size = {size}")
+
+def is_within_square(current, other, size):
+    return (abs(other[0] - current[0]) <= size//2) and (abs(other[1] - current[1]) <= size//2)
 
 def is_float(string):
     try:
@@ -66,7 +110,7 @@ def is_float(string):
 
 def main():
     # CHECKING NUMBER OF CMD LINE PARAMETERS
-    assert len(sys.argv) == 6, "Usage: python G027.py <K> <file_name>"
+    assert len(sys.argv) == 6, "Usage: python G027.py <file_name> <D> <M> <K> <L>"
 
     # SPARK SETUP
     conf = SparkConf().setAppName('Outlier Detection')
@@ -95,11 +139,7 @@ def main():
     L = int(L)
 
     # PRINT INPUT FILE, D, M, K, L
-    print(f'Input file: {sys.argv[1]}')
-    print(f'D = {sys.argv[2]}')
-    print(f'M = {sys.argv[3]}')
-    print(f'K = {sys.argv[4]}')
-    print(f'L = {sys.argv[5]}')
+    print(f'{sys.argv[1]} D = {sys.argv[2]} M = {sys.argv[3]} K = {sys.argv[4]} L = {sys.argv[5]}')
 
     # 5. Read input file and subdivide it into L random partitions
     data_path = sys.argv[1]
@@ -112,7 +152,7 @@ def main():
 
     # total number of points
     num_Points = len(inputPoints.collect())
-    print(f'Total number of points: {num_Points}')
+    print(f'Number of points = {num_Points}')
 
     MAX_POINTS_EXACT_OUTLIERS = 200000
 
@@ -124,12 +164,12 @@ def main():
         start = time.time()
         ExactOutliers(listOfPoints=listOfPoints, D=D, M=M, K=K)
         end = time.time()
-        print(f'Running time of ExactOutliers: {end - start} s')
+        print(f'Running time of ExactOutliers = {round(1000*(end - start))} ms')
 
     start = time.time()
     MRApproxOutliers(inputPoints=inputPoints, D=D, M=M, K=K)
     end = time.time()
-    print(f'Running time of MRApproxOutliers: {end - start} s')
+    print(f'Running time of MRApproxOutliers = {round(1000*(end - start))} ms')
 
 if __name__ == "__main__":
 	main()
