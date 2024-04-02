@@ -16,6 +16,9 @@ def ExactOutliers(listOfPoints, D, M, K):
     # We compute only the upper triangle of the distance matrix for efficiency
     for i in range(0, len(listOfPoints)-1):
         for j in range(i+1, len(listOfPoints)):
+            '''We use the function math.dist because we noticed that is faster than 
+               computing the square of the distance.
+               This is probably due to the inner implementation of math.dist'''
             if  math.dist(listOfPoints[i], listOfPoints[j]) <= D:
                 B_cardinality[i][1] += 1
                 B_cardinality[j][1] += 1
