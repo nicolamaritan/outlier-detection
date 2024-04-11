@@ -54,6 +54,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
            .mapPartitions(gather_pairs_partitions)                            # <-- REDUCE PHASE (R1)
            .groupByKey()                                                      # <-- SHUFFLE+GROUPING
            .mapValues(lambda vals: sum(vals))                                 # <-- REDUCE PHASE (R2)
+           .cache()                         
            )
 
     # -------------------- Step B --------------------
