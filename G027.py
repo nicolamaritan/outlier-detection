@@ -5,6 +5,11 @@ import sys
 import os
 
 def ExactOutliers(listOfPoints, D, M, K):
+
+    """
+    Computes the exact number of outliers.
+    """
+
     # Each line of the kind "x,y\n" is converted into a tuple (x,y) of floats
     listOfPoints = [tuple(map(float, point.strip().split(','))) for point in listOfPoints]
 
@@ -33,22 +38,36 @@ def ExactOutliers(listOfPoints, D, M, K):
             print(f"Point: {listOfPoints[B_cardinality[i][0]]}")
 
 def floor_coordinates(point, D):
+    '''
+    Computes the coordinates of a cell (bottom left corner coordinates).
+    '''
+
     capital_lambda = D / (2*math.sqrt(2))
     # Converts each key (x_p, y_p) into (floor(x_p/Lambda), floor(x_p/Lambda)).
     # Floor is implemented through casting from float to int.
     return [((math.floor(point[0] / capital_lambda), math.floor(point[1] / capital_lambda)), 1)]
 
 def gather_pairs_partitions(pairs):
-	pairs_dict = {}
-	for p in pairs:
-		coordinate, occurrence = p[0], p[1] # p[1] is always 1 from the previous round
-		if coordinate not in pairs_dict.keys():
-			pairs_dict[coordinate] = occurrence
-		else:
-			pairs_dict[coordinate] += occurrence
-	return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
+
+    '''
+    Computes a list of key-value pairs: (cell coordinates, number of points in the cell).
+    '''
+
+    pairs_dict = {}
+    for p in pairs:
+        coordinate, occurrence = p[0], p[1] # p[1] is always 1 from the previous round
+        if coordinate not in pairs_dict.keys():
+            pairs_dict[coordinate] = occurrence
+        else:
+            pairs_dict[coordinate] += occurrence
+    return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
 
 def MRApproxOutliers(inputPoints, D, M, K):
+
+    '''
+    Computes the approximate number of outliers.
+    '''
+
     # -------------------- Step A --------------------
     pairs_RDD = (inputPoints.flatMap(lambda str: floor_coordinates(str, D))   # <-- MAP PHASE (R1)
            .mapPartitions(gather_pairs_partitions)                            # <-- REDUCE PHASE (R1)
@@ -103,9 +122,19 @@ def MRApproxOutliers(inputPoints, D, M, K):
         print(f"Cell: {cell}  Size = {size}")
 
 def is_within_square(current, other, size):
+
+    '''
+    Returns if a cell is within a square of a certain size.
+    '''
+
     return (abs(other[0] - current[0]) <= size//2) and (abs(other[1] - current[1]) <= size//2)
 
 def is_float(string):
+
+    '''
+    Returns if a string represents a float.
+    '''
+
     try:
         float(string)
         return True
